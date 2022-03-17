@@ -1,6 +1,6 @@
 {
-  "name": "sherpa-sdk",
-  "version": "1.0.0",
+  "name": "test-sherpa-sdk",
+  "version": "0.0.13",
   "description": "",
   "main": "./dist/sherpa.js",
   "scripts": {

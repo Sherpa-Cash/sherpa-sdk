@@ -925,6 +925,10 @@ var SherpaSDK = class {
     return compliance;
   }
   async sendDeposit(valueWei, commitment, selectedToken, fromAddress) {
+    console.log(this.chainId, "...", await this.web3.eth.getChainId());
+    if (this.chainId !== await this.web3.eth.getChainId()) {
+      throw new Error("Cant make a deposit in wrong network");
+    }
     const sherpaProxyAddress = getters.getSherpaProxyContract(this.netId);
     if (this.chainId !== await this.web3.eth.getChainId()) {
       throw new Error("Cant make a deposit in wrong network");
@@ -960,8 +964,10 @@ var SherpaSDK = class {
     const pitContract = new this.web3.eth.Contract(sherpaProxyABI, sherpaProxyContractAddress);
     const sherpaContract = new this.web3.eth.Contract(ethSherpaABI, contractInfo.contractAddress);
     const depositEvents = this.events.events.filter((e) => e.type === "Deposit").sort(sortEventsByLeafIndex);
-    if (parsedNote.netId !== selectedRelayer.chainId && parsedNote.netId !== "*") {
-      throw new Error("This relayer is for a different network");
+    if (selectedRelayer) {
+      if (parsedNote.netId !== selectedRelayer.chainId && parsedNote.netId !== "*") {
+        throw new Error("This relayer is for a different network");
+      }
     }
     let totalFee = 0;
     let rewardAccount = 0;
