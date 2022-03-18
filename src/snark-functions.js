@@ -1,6 +1,3 @@
-import BigNumber from "bignumber.js";
-import Web3 from "web3";
-
 const randomBytes = require("crypto").randomBytes;
 const circomlib = require("circomlib");
 const { bigInt } = require("snarkjs");
@@ -8,8 +5,9 @@ const assert = require("assert");
 const buildGroth16 = require("websnark/src/groth16");
 const websnarkUtils = require("websnark/src/utils");
 const merkleTree = require("./lib/merkleTree");
+
 const MERKLE_TREE_HEIGHT = 20;
-const keccak256 = require("keccak256");
+
 
 const rbigint = nbytes => bigInt.leBuff2int(randomBytes(nbytes));
 // Compute pedersen hash
@@ -52,7 +50,7 @@ export function parseNote(noteString) {
   const match = noteRegex.exec(noteString);
 
   if (!match) {
-    throw new Error("The note has invalid format");
+    throw new Error("The note has invalid format"+ JSON.stringify(noteString));
   }
 
   const buf = Buffer.from(match.groups.note, "hex");
@@ -112,7 +110,7 @@ export async function generateMerkleProofSherpa(events, deposit, contract) {
   // Compute merkle proof of our commitment
   return tree.path(leafIndex);
 }
-export async function generateProofSherpa(contract, deposit, recipient, events, relayer = 0, fee = 0, refund = 0) {
+export async function generateProofSherpa(contract, deposit, recipient, events, circuit, provingKey, relayer = 0, fee = 0, refund = 0) {
   // Compute Merkle proof of commitment
   const {root, path_elements, path_index} = await generateMerkleProofSherpa(events, deposit, contract)
   const input = {
@@ -131,21 +129,19 @@ export async function generateProofSherpa(contract, deposit, recipient, events, 
     pathIndices: path_index,
   }
   const groth16 = await buildGroth16();
-  const circuit = await (await fetch('/withdraw.json')).json()
-  const proving_key = await (await fetch('/withdraw_proving_key.bin')).arrayBuffer()
 
   console.log('Generating SNARK proof')
   console.time('Proof time')
-  const proofData = await websnarkUtils.genWitnessAndProve(groth16, input, circuit, proving_key)
+  const proofData = await websnarkUtils.genWitnessAndProve(groth16, input, circuit, provingKey)
   const {proof} = websnarkUtils.toSolidityInput(proofData)
   console.timeEnd('Proof time')
 
   const args = [
-    toHex(input.root), 
-    toHex(input.nullifierHash), 
-    toHex(input.recipient, 20), 
-    toHex(input.relayer, 20), 
-    toHex(input.fee), 
+    toHex(input.root),
+    toHex(input.nullifierHash),
+    toHex(input.recipient, 20),
+    toHex(input.relayer, 20),
+    toHex(input.fee),
     toHex(input.refund)
   ]
   const extraArgs = [deposit.nullifier, deposit.secret, path_elements, path_index]

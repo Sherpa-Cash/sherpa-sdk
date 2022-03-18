@@ -1,7 +1,7 @@
-import { toHex } from "snark-functions";
+import { toHex } from "./snark-functions";
 import Web3 from "web3";
-import networkConfig from 'networkConfig'
-import { createClient } from '@urql/core';
+import networkConfig from './networkConfig'
+import { request, gql } from "graphql-request";
 
 export const state = () => {
   return {
@@ -40,14 +40,14 @@ export const actions = {
     commit("setError", error);
   },
 
-  async getStatisticsSubgraph({dispatch, commit, rootState}, contractAddress) {
-    dispatch('loading/enable', {message: $nuxt.$i18n.t('pages.vault.events')}, {root: true})
+  async getStatisticsSubgraph({dispatch, commit, rootState}, contractAddress, chainId) {
+    // dispatch('loading/enable', {message: $nuxt.$i18n.t('pages.vault.events')}, {root: true})
     const events = [];
     const contract = rootState.sherpa.contracts.find(contract => contract.contractAddress === contractAddress);
     const amnt = contract.label;
     const curr = (contract.token).toUpperCase();
 
-    const dep = await subgraphDepositQuery(18, 0, amnt, curr);
+    const dep = await subgraphDepositQuery(18, 0, amnt, curr, chainId);
     console.log(dep);
     const standardDepositEvents = dep
       .map(e => ({
@@ -61,22 +61,23 @@ export const actions = {
       }));
     events.push(...standardDepositEvents);
     const lb = dep.length > 0 ? parseInt(dep[0].blockNumber) : 0
-    commit("setEvents", { events, latestBlockFetched: lb, contractAddress});
-    dispatch('loading/disable', null, {root: true})
+    return { events, latestBlockFetched: lb, contractAddress}
+    // commit("setEvents", { events, latestBlockFetched: lb, contractAddress});
+    // dispatch('loading/disable', null, {root: true})
   },
-  async getEventsSubgraph({dispatch, commit, rootState}, contractAddress) {
-    dispatch('loading/enable', {message: $nuxt.$i18n.t('pages.vault.events')}, {root: true})
+  async getEventsSubgraph(sherpaStats, contractAddress, chainId) {
+    // dispatch('loading/enable', {message: $nuxt.$i18n.t('pages.vault.events')}, {root: true})
     const events = [];
     const dep = [];
     const wit = [];
-    const contract = rootState.sherpa.contracts.find(contract => contract.contractAddress === contractAddress);
+    const contract = sherpaStats.contracts.find(contract => contract.contractAddress === contractAddress);
     const amnt = contract.label;
     const curr = (contract.token).toUpperCase();
     let offset = 0;
     let depReturn;
     let witReturn;
     while (1) {
-      depReturn = await subgraphDepositQuery(1000, offset, amnt, curr);
+      depReturn = await subgraphDepositQuery(1000, offset, amnt, curr, chainId);
       if (depReturn.length === 0) {
         break;
       }
@@ -85,7 +86,7 @@ export const actions = {
     }
     offset = 0;
     while (1) {
-      witReturn = await subgraphWithdrawalQuery(1000, offset, amnt, curr);
+      witReturn = await subgraphWithdrawalQuery(1000, offset, amnt, curr, chainId);
       if (witReturn.length === 0) {
         break;
       }
@@ -113,18 +114,19 @@ export const actions = {
         timestamp: e.timestamp,
         dateTime: new Date(parseInt(e.timestamp) * 1000)
       }));
-    
+
     events.push(...standardDepositEvents);
     events.push(...standardWithdrawalEvents);
     const db = dep[0] ? parseInt(dep[0].blockNumber) : 0;
     const wb = wit[0] ? parseInt(wit[0].blockNumber) : 0;
     const lb = Math.max(db, wb);
-    commit("setEvents", { events, latestBlockFetched: lb, contractAddress});
-    dispatch('loading/disable', null, {root: true})
+    return { events, latestBlockFetched: lb, contractAddress}
+    // commit("setEvents", { events, latestBlockFetched: lb, contractAddress});
+    // dispatch('loading/disable', null, {root: true})
   }
 };
 
-function sortEventsByLeafIndex(a, b) {
+export function sortEventsByLeafIndex(a, b) {
   return a.leafIndex < b.leafIndex ? 1 : -1;
 }
 
@@ -132,12 +134,11 @@ function sortEventsByBlockTime(a, b) {
   return a.blockTime < b.blockTime ? 1 : -1;
 }
 
-async function subgraphDepositQuery(first, offset, amnt, curr) {
-  const id = $nuxt.$config.chainId;
-  const network = { ...networkConfig[`chainId${id}`], id: Number(id) };
+async function subgraphDepositQuery(first, offset, amnt, curr, chainId) {
+  // const id = $nuxt.$config.chainId;
+  const network = { ...networkConfig[`chainId${chainId}`], id: Number(chainId) };
   const APIURL = network.subgraph;
-  const client = createClient({ url: APIURL });
-  const depQuery = `
+  const depQuery = gql`
     query subgraphDeposits($first: Int, $offset: Int, $curr: String, $amnt: String){
       deposits(first: $first, skip: $offset, orderBy: index, orderDirection: desc, where: { currency: $curr, amount: $amnt }){
         id
@@ -151,16 +152,26 @@ async function subgraphDepositQuery(first, offset, amnt, curr) {
       }
     }
     `
-  const dep = (await client.query(depQuery, {first: first, offset: offset, curr: curr, amnt: amnt }).toPromise()).data.deposits;
-  return dep;
+  const variables = {
+    first,
+    offset,
+    curr,
+    amnt,
+  };
+
+
+  const response = await request(APIURL, depQuery, variables).catch((err) =>
+    console.log(err)
+  );
+  return response.deposits;
+
 }
 
-async function subgraphWithdrawalQuery(first, offset, amnt, curr) {
-  const id = $nuxt.$config.chainId;
-  const network = { ...networkConfig[`chainId${id}`], id: Number(id) };
+async function subgraphWithdrawalQuery(first, offset, amnt, curr, chainId) {
+  // const id = $nuxt.$config.chainId;
+  const network = { ...networkConfig[`chainId${chainId}`], id: Number(chainId) };
   const APIURL = network.subgraph;
-  const client = createClient({ url: APIURL });
-  const witQuery = `
+  const witQuery = gql`
     query subgraphWithdrawals($first: Int, $offset: Int, $curr: String, $amnt: String){
       withdrawals(first: $first, skip: $offset, orderBy: index, orderDirection: desc, where: { currency: $curr, amount: $amnt }){
         id
@@ -176,8 +187,16 @@ async function subgraphWithdrawalQuery(first, offset, amnt, curr) {
       }
     }
     `
-  const wit = (await client.query(witQuery, {first: first, offset: offset, curr: curr, amnt: amnt }).toPromise()).data.withdrawals;
-  return wit;
+  const variables = {
+    first,
+    offset,
+    curr,
+    amnt,
+  };
+  const response = await request(APIURL, witQuery, variables).catch((err) =>
+    console.log(err)
+  );
+  return response.withdrawals;
 }
 
 function decodeThisEvent(event){
