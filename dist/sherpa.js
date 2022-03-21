@@ -925,7 +925,7 @@ var SherpaSDK = class {
     return compliance;
   }
   async sendDeposit(valueWei, commitment, selectedToken, fromAddress) {
-    const sherpaProxyAddress = getters.getSherpaProxyContract(this.netId);
+    const sherpaProxyAddress = getters.getSherpaProxyContract(this.chainId);
     if (this.chainId !== await this.web3.eth.getChainId()) {
       throw new Error("Cant make a deposit in wrong network");
     }
