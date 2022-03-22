@@ -98,7 +98,7 @@ export class SherpaSDK {
     }
     const valueWei = value * 1e18
     const selectedContractAddress = getters.getNoteContractInfo({
-      amount:valueWei,
+      amount:Number(value),
       currency:selectedToken,
       netId:this.chainId
     }).contractAddress
