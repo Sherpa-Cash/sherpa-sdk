@@ -96,8 +96,9 @@ export class SherpaSDK {
     if (this.chainId !== (await this.web3.eth.getChainId())) {
       throw new Error("Cant make a deposit in wrong network");
     }
+    const valueWei = value * 1e18
     const selectedContractAddress = getters.getNoteContractInfo({
-      amount:Number(value * 1e18),
+      amount:Number(valueWei),
       currency:selectedToken,
       netId:this.chainId
     }).contractAddress
@@ -110,7 +111,7 @@ export class SherpaSDK {
       toHex(commitment),
       0)
       .send({
-        value: selectedToken === "avax" ? value : 0,
+        value: selectedToken === "avax" ? valueWei : 0,
         from: fromAddress,
         gas: 2100000
       });
