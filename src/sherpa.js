@@ -146,8 +146,13 @@ export class SherpaSDK {
     const depositEvents = this.events.events.filter(e => e.type === 'Deposit').sort(sortEventsByLeafIndex);
 
     /** more sanity checks **/
-    if (parsedNote.netId !== selectedRelayer.chainId && parsedNote.netId !== '*'){
-      throw new Error('This relayer is for a different network')
+    if (!selfRelay) {
+      if (
+        parsedNote.netId !== selectedRelayer.chainId &&
+        parsedNote.netId !== "*"
+      ) {
+        throw new Error("This relayer is for a different network");
+      }
     }
     /** Calculate relayer info **/
     let totalFee = 0

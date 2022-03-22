@@ -960,8 +960,10 @@ var SherpaSDK = class {
     const pitContract = new this.web3.eth.Contract(sherpaProxyABI, sherpaProxyContractAddress);
     const sherpaContract = new this.web3.eth.Contract(ethSherpaABI, contractInfo.contractAddress);
     const depositEvents = this.events.events.filter((e) => e.type === "Deposit").sort(sortEventsByLeafIndex);
-    if (parsedNote.netId !== selectedRelayer.chainId && parsedNote.netId !== "*") {
-      throw new Error("This relayer is for a different network");
+    if (!selfRelay) {
+      if (parsedNote.netId !== selectedRelayer.chainId && parsedNote.netId !== "*") {
+        throw new Error("This relayer is for a different network");
+      }
     }
     let totalFee = 0;
     let rewardAccount = 0;
