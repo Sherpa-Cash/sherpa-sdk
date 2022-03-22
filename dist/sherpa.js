@@ -671,7 +671,7 @@ var state = {
 var getters = {
   getNoteContractInfo: (parsedNote) => {
     return state.contracts.filter((contract) => {
-      return contract.value == parsedNote.amount && contract.token === parsedNote.currency && contract.chainId === parsedNote.netId;
+      return contract.label == parsedNote.amount && contract.token === parsedNote.currency && contract.chainId === parsedNote.netId;
     })[0];
   },
   getSherpaProxyContract: (chainId) => {

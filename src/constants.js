@@ -287,7 +287,7 @@ export const getters = {
   getNoteContractInfo: parsedNote => {
     return state.contracts.filter(contract => {
       return (
-        contract.value == parsedNote.amount && //todo changed from  contract.label === parsedNote.amount &&
+        contract.label == parsedNote.amount &&
         contract.token === parsedNote.currency &&
         contract.chainId === parsedNote.netId
       );
