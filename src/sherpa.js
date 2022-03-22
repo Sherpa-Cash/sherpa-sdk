@@ -91,13 +91,13 @@ export class SherpaSDK {
     return compliance
   }
 
-  async sendDeposit(valueWei, commitment, selectedToken, fromAddress) {
+  async sendDeposit(value, commitment, selectedToken, fromAddress) {
     const sherpaProxyAddress = getters.getSherpaProxyContract(this.chainId)
     if (this.chainId !== (await this.web3.eth.getChainId())) {
       throw new Error("Cant make a deposit in wrong network");
     }
     const selectedContractAddress = getters.getNoteContractInfo({
-      amount:Number(valueWei),
+      amount:Number(value * 1e18),
       currency:selectedToken,
       netId:this.chainId
     }).contractAddress
@@ -110,7 +110,7 @@ export class SherpaSDK {
       toHex(commitment),
       0)
       .send({
-        value: selectedToken === "avax" ? valueWei : 0,
+        value: selectedToken === "avax" ? value : 0,
         from: fromAddress,
         gas: 2100000
       });
